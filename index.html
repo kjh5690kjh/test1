@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제로에서 다이아까지 - 3라인 한계 돌파 프로젝트</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Confetti (폭죽 애니메이션 라이브러리) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', 'sans-serif'], // 폰트 변경
+                    },
+                    colors: {
+                        diamond: { // 다이아몬드 블루 테마 컬러
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7', // 메인 컬러
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            /* LoL 인게임 기본 커서 스타일 (골드) */
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='30' viewBox='0 0 28 30' fill='none'%3E%3Cpath d='M2 2L24 11L13 14L9 26L2 2Z' fill='%23E4C871' stroke='%233A2B15' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M5 6L18 11.5L11.5 13.5L8.5 20L5 6Z' fill='%23F9E8A2'/%3E%3C/svg%3E") 0 0, auto;
+        }
+
+        /* LoL 인게임 클릭/호버 커서 스타일 (다이아몬드 블루) */
+        a, button, [onclick], .cursor-pointer {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='30' viewBox='0 0 28 30' fill='none'%3E%3Cpath d='M2 2L24 11L13 14L9 26L2 2Z' fill='%2338bdf8' stroke='%230c4a6e' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M5 6L18 11.5L11.5 13.5L8.5 20L5 6Z' fill='%23bae6fd'/%3E%3C/svg%3E") 0 0, pointer !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f8fafc; 
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #bae6fd; 
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #334155; 
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #38bdf8; 
+        }
+
+        /* Animation Classes */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .fade-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Grid Background for IT/Data feel */
+        .grid-bg {
+            background-image: 
+                linear-gradient(to right, rgba(14, 165, 233, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(14, 165, 233, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center center;
+        }
+        .dark .grid-bg {
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        /* Typing Cursor Animation */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .typing-cursor {
+            display: inline-block;
+            animation: blink 1s step-end infinite;
+            font-weight: 300;
+        }
+
+        /* Achievement Toast Animation (업적 알림 애니메이션) */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .toast-enter { animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .toast-exit { animation: fadeOut 0.5s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors duration-300 antialiased font-sans">
+
+    <!-- 업적(Achievement) 토스트 알림을 띄울 컨테이너 -->
+    <div id="achievement-container" class="fixed bottom-6 right-6 z-[70] flex flex-col gap-3 pointer-events-none"></div>
+
+    <div class="fixed top-0 left-0 w-full h-1 z-50 bg-slate-100 dark:bg-slate-800">
+        <div id="scroll-progress" class="h-1 bg-diamond-500 w-0 transition-all duration-100 ease-out shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
+    </div>
+
+    <nav class="fixed w-full z-40 top-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0 font-black text-2xl tracking-tighter text-diamond-600 dark:text-diamond-400">
+                    <a href="#home">PROJECT: DIA</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="#summary" class="hover:text-diamond-600 dark:hover:text-diamond-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">요약</a>
+                        <a href="#timeline" class="hover:text-diamond-600 dark:hover:text-diamond-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">타임라인</a>
+                        <a href="#performance" class="hover:text-diamond-600 dark:hover:text-diamond-400 px-3 py-2 rounded-md text-sm font-medium transition-colors">퍼포먼스</a>
+                    </div>
+                </div>
+                <!-- Theme Toggle Button -->
+                <div>
+                    <button id="theme-toggle" class="group p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-diamond-50 dark:hover:bg-slate-700 transition-all duration-300 focus:outline-none ring-2 ring-transparent focus:ring-diamond-500 shadow-sm hover:shadow-md transform hover:-translate-y-0.5">
+                        <i id="theme-icon-dark" class="fas fa-moon text-slate-600 hidden dark:block dark:text-diamond-300 group-hover:-rotate-12 transition-transform duration-300"></i>
+                        <i id="theme-icon-light" class="fas fa-sun text-diamond-500 block dark:hidden group-hover:rotate-90 transition-transform duration-300"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <section id="home" class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden min-h-screen flex items-center">
+        <!-- Parallax Background Layer -->
+        <div id="parallax-bg" class="absolute inset-0 grid-bg w-full h-[150%] -top-[25%] z-0 transition-transform duration-75 ease-out"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-white dark:to-slate-900 z-0"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center fade-up">
+            <div class="inline-flex items-center px-4 py-2 rounded-full bg-diamond-50 dark:bg-diamond-900/30 text-diamond-600 dark:text-diamond-400 text-sm font-bold mb-8 border border-diamond-200 dark:border-diamond-800 shadow-sm">
+                <i class="fas fa-gem mr-2"></i> 한계 돌파 프로젝트
+            </div>
+            
+            <!-- 타이핑 효과가 적용될 제목 영역 (레이아웃 흔들림 방지를 위해 min-height 추가) -->
+            <h1 class="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight" style="min-height: 2.5em;">
+                <span id="typing-line1"></span><span id="cursor1" class="typing-cursor text-slate-800 dark:text-slate-200">|</span><br />
+                <span id="typing-line2" class="text-transparent bg-clip-text bg-gradient-to-r from-diamond-400 to-diamond-600"></span><span id="cursor2" class="typing-cursor text-diamond-500 hidden">|</span>
+            </h1>
+            
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-slate-600 dark:text-slate-400 font-medium">
+                세 개의 라인, 세 번의 증명.
+            </p>
+            <p class="mt-4 max-w-3xl mx-auto text-base sm:text-lg text-slate-500 dark:text-slate-400">
+                단순한 게임 플레이가 아닙니다. 탑, 정글, 미드 3개 라인의 전혀 다른 생태계에서 겪은 '실패(Error)'를 분석하고 플레이를 '최적화(Optimization)'하여 목표를 달성한 데이터 기반의 문제 해결 회고록입니다.
+            </p>
+            <div class="mt-12 flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#timeline" class="px-8 py-4 border border-transparent text-base font-bold rounded-xl shadow-md text-white bg-diamond-600 hover:bg-diamond-700 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-diamond-500/30">
+                    분석 과정 보기
+                </a>
+                <a href="#performance" class="px-8 py-4 border-2 border-slate-200 dark:border-slate-700 text-base font-bold rounded-xl text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:-translate-y-1">
+                    데이터 지표 확인
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="summary" class="py-24 bg-white dark:bg-slate-900 transition-colors duration-300 border-t border-slate-100 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center fade-up mb-16">
+                <h2 class="text-sm font-bold text-diamond-600 dark:text-diamond-500 tracking-widest uppercase mb-2">Core Value</h2>
+                <p class="text-3xl font-extrabold sm:text-4xl">프로젝트 매력 포인트</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Point 1 -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-8 border border-slate-200 dark:border-slate-700 hover:border-diamond-400 dark:hover:border-diamond-500 transition-all duration-300 hover:shadow-lg fade-up group">
+                    <div class="w-14 h-14 inline-flex items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm text-diamond-600 dark:text-diamond-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-chart-line text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">수치로 증명하는 퍼포먼스</h3>
+                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        감에 의존하지 않고 데이터를 기반으로 플레이를 개선했습니다. 그 결과, 모스트 챔피언 상위 3개의 승률을 <strong>60% 이상</strong>으로 끌어올리며 성과를 증명했습니다.
+                    </p>
+                </div>
+                <!-- Point 2 -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-8 border border-slate-200 dark:border-slate-700 hover:border-diamond-400 dark:hover:border-diamond-500 transition-all duration-300 hover:shadow-lg fade-up group" style="transition-delay: 100ms;">
+                    <div class="w-14 h-14 inline-flex items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm text-diamond-600 dark:text-diamond-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-network-wired text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">완벽한 생태계 적응력</h3>
+                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        탑, 정글, 미드. 각기 다른 3개 라인의 이질적인 메타와 역할을 밑바닥부터 학습하고 체화하여 유연한 적응력을 길렀습니다.
+                    </p>
+                </div>
+                <!-- Point 3 -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-8 border border-slate-200 dark:border-slate-700 hover:border-diamond-400 dark:hover:border-diamond-500 transition-all duration-300 hover:shadow-lg fade-up group" style="transition-delay: 200ms;">
+                    <div class="w-14 h-14 inline-flex items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm text-diamond-600 dark:text-diamond-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-bug text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">집요한 문제 해결력 (디버깅)</h3>
+                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        티어 상승이 막히는 구간(벽)마다 단순 반복(판수 박기)을 지양했습니다. 패배 요인을 냉정하게 리플레이로 분석하고, 문제를 디버깅하듯 해결했습니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="timeline" class="py-24 bg-slate-50 dark:bg-slate-800/20 transition-colors duration-300 relative overflow-hidden">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center fade-up mb-16">
+                <h2 class="text-sm font-bold text-diamond-600 dark:text-diamond-500 tracking-widest uppercase mb-2">Process</h2>
+                <p class="text-3xl font-extrabold sm:text-4xl">도전과 최적화의 타임라인</p>
+            </div>
+
+            <!-- Timeline Container -->
+            <div class="relative border-l-2 border-slate-200 dark:border-slate-700 ml-3 md:ml-6 space-y-12">
+                
+                <!-- Stage 1: Top -->
+                <div class="relative pl-8 md:pl-0 fade-up">
+                    <div class="md:flex items-center justify-between w-full">
+                        <div class="order-1 md:w-5/12 hidden md:block text-right pr-8">
+                            <span class="text-5xl font-black text-slate-200 dark:text-slate-700">01</span>
+                        </div>
+                        <div class="absolute left-[-9px] md:left-1/2 md:-ml-[9px] w-4 h-4 bg-white dark:bg-slate-800 border-4 border-diamond-500 rounded-full z-10"></div>
+                        <div class="order-1 md:w-5/12 md:pl-8">
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="px-3 py-1 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-full text-xs font-bold">TOP</span>
+                                    <h3 class="font-bold text-xl">고립된 섬에서의 생존기</h3>
+                                </div>
+                                <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                    <strong>Error:</strong> 텔레포트 타이밍 계산 실패 및 상대 정글 동선 예측 부재로 인한 라인전 붕괴.<br>
+                                    <strong>Optimization:</strong> 라인 관리(프리징/푸시) 개념 재정립. 매 판 상대 정글러 위치를 미니맵에 타이핑하며 생존력 극대화.
+                                </p>
+                                <button onclick="openModal('탑 라인 최적화 과정', '가장 먼저 시작한 탑 라인에서는 1:1 교전 능력보다 \'파밍과 합류의 줄타기\'가 중요함을 깨달았습니다. 라인을 밀고 렌즈를 돌리며 시야를 잡는 루틴을 강제하여 데스율을 30% 감소시켰습니다.')" class="text-diamond-600 dark:text-diamond-400 text-sm font-semibold hover:underline">디버깅 상세 보기 &rarr;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stage 2: Jungle -->
+                <div class="relative pl-8 md:pl-0 fade-up">
+                    <div class="md:flex items-center justify-between w-full">
+                        <div class="order-1 md:w-5/12 md:text-right md:pr-8">
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                                <div class="flex items-center md:justify-end gap-2 mb-3">
+                                    <h3 class="font-bold text-xl">전장을 설계하는 오케스트라</h3>
+                                    <span class="px-3 py-1 bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-full text-xs font-bold">JUNGLE</span>
+                                </div>
+                                <p class="text-sm text-slate-600 dark:text-slate-400 mb-4 md:text-right">
+                                    <strong>Error:</strong> 무의미한 갱킹 시도로 인한 성장 정체 및 오브젝트 컨트롤 상실.<br>
+                                    <strong>Optimization:</strong> 턴(Turn) 개념 도입. 캠프 동선 최적화 알고리즘(?)을 적용하여 낭비되는 동선을 줄이고, 교전 전 항상 인원수 우위를 계산함.
+                                </p>
+                                <button onclick="openModal('정글 동선 최적화', '정글은 마치 리소스 할당(Resource Allocation) 문제와 같았습니다. 정글 몹 스폰 시간과 아군 라인 주도권을 변수로 두고, 가장 기대값이 높은 동선을 짜는 훈련을 했습니다. 이를 통해 초반 15분 전령/용 획득률을 크게 높였습니다.')" class="text-diamond-600 dark:text-diamond-400 text-sm font-semibold hover:underline">디버깅 상세 보기 &rarr;</button>
+                            </div>
+                        </div>
+                        <div class="absolute left-[-9px] md:left-1/2 md:-ml-[9px] w-4 h-4 bg-white dark:bg-slate-800 border-4 border-diamond-500 rounded-full z-10"></div>
+                        <div class="order-1 md:w-5/12 hidden md:block pl-8">
+                            <span class="text-5xl font-black text-slate-200 dark:text-slate-700">02</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stage 3: Mid -->
+                <div class="relative pl-8 md:pl-0 fade-up">
+                    <div class="md:flex items-center justify-between w-full">
+                        <div class="order-1 md:w-5/12 hidden md:block text-right pr-8">
+                            <span class="text-5xl font-black text-slate-200 dark:text-slate-700">03</span>
+                        </div>
+                        <div class="absolute left-[-9px] md:left-1/2 md:-ml-[9px] w-4 h-4 bg-white dark:bg-slate-800 border-4 border-diamond-500 rounded-full z-10"></div>
+                        <div class="order-1 md:w-5/12 md:pl-8">
+                            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 border-l-diamond-500">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="px-3 py-1 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-xs font-bold">MID</span>
+                                    <h3 class="font-bold text-xl">마침내, 다이아몬드 도달</h3>
+                                </div>
+                                <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                                    <strong>Error:</strong> 맵의 중심임에도 영향력을 행사하지 못하고 라인전 반반에 머무름.<br>
+                                    <strong>Optimization:</strong> 푸시 주도권을 바탕으로 한 능동적인 로밍. 탑과 정글에서의 경험을 통합하여, 게임 전체의 흐름(Macro)을 읽는 눈을 완성.
+                                </p>
+                                <button onclick="openModal('미드에서의 최종 통합', '가장 마지막에 도전한 미드 라인은 탑의 라인전 디테일과 정글의 맵 리딩 능력이 모두 요구되는 자리였습니다. 이전 두 라인에서의 실패와 학습 데이터가 쌓여 있었기에, 가장 빠른 속도로 티어를 올릴 수 있었습니다.')" class="text-diamond-600 dark:text-diamond-400 text-sm font-semibold hover:underline">디버깅 상세 보기 &rarr;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="performance" class="py-24 bg-white dark:bg-slate-900 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center fade-up mb-16">
+                <h2 class="text-sm font-bold text-diamond-600 dark:text-diamond-500 tracking-widest uppercase mb-2">Metrics</h2>
+                <p class="text-3xl font-extrabold sm:text-4xl">결과 데이터 요약</p>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-8 fade-up">
+                <!-- Stat 1 -->
+                <div class="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-6 w-full sm:w-64 text-center border border-slate-200 dark:border-slate-700">
+                    <div class="text-slate-400 mb-2"><i class="fas fa-trophy text-2xl"></i></div>
+                    <div class="text-4xl font-black text-diamond-600 dark:text-diamond-400 mb-1">62%</div>
+                    <div class="text-sm font-bold text-slate-600 dark:text-slate-400">모스트 3 챔피언 승률</div>
+                </div>
+                <!-- Stat 2 -->
+                <div class="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-6 w-full sm:w-64 text-center border border-slate-200 dark:border-slate-700">
+                    <div class="text-slate-400 mb-2"><i class="fas fa-route text-2xl"></i></div>
+                    <div class="text-4xl font-black text-diamond-600 dark:text-diamond-400 mb-1">3</div>
+                    <div class="text-sm font-bold text-slate-600 dark:text-slate-400">마스터한 라인 (Top/Jg/Mid)</div>
+                </div>
+                <!-- Stat 3 -->
+                <div class="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-6 w-full sm:w-64 text-center border border-slate-200 dark:border-slate-700">
+                    <div class="text-slate-400 mb-2"><i class="fas fa-search-plus text-2xl"></i></div>
+                    <div class="text-4xl font-black text-diamond-600 dark:text-diamond-400 mb-1">100+</div>
+                    <div class="text-sm font-bold text-slate-600 dark:text-slate-400">리플레이 분석 횟수</div>
+                </div>
+            </div>
+
+            <div class="mt-16 text-center fade-up">
+                <button id="btn-honor" class="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-200 bg-diamond-600 border border-transparent rounded-full shadow-lg hover:bg-diamond-700 hover:shadow-diamond-500/50 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-diamond-600">
+                    <i class="fas fa-medal mr-2 text-yellow-300 group-hover:scale-110 transition-transform"></i> 
+                    명예로운 소환사 투표하기 (<span id="honor-count">1,240</span>)
+                </button>
+                <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">이 프로젝트가 인상 깊었다면 명예를 부여해주세요!</p>
+            </div>
+            
+            <div class="mt-16 text-center fade-up bg-diamond-50 dark:bg-diamond-900/20 rounded-2xl p-8 border border-diamond-100 dark:border-diamond-800/50 max-w-3xl mx-auto">
+                <p class="text-lg text-slate-700 dark:text-slate-300 font-medium">
+                    "게임을 넘어선 <strong>'문제 해결력(Problem Solving)'</strong>의 증명.<br>
+                    이 프로젝트에서 얻은 분석과 최적화의 경험은 개발과 데이터 분석 영역에서도 빛을 발할 것입니다."
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-slate-100 dark:bg-slate-950 py-10 border-t border-slate-200 dark:border-slate-800 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                &copy; 2024 Project: DIA. Created for Data/AI Class Colleagues.
+            </p>
+        </div>
+    </footer>
+
+    <div id="custom-modal" class="fixed inset-0 z-[60] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+        <!-- Modal Content -->
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="relative bg-white dark:bg-slate-800 rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full scale-95 opacity-0 duration-300 border border-slate-200 dark:border-slate-700" id="modal-panel">
+                <div class="px-6 py-6 sm:p-8">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-diamond-100 dark:bg-diamond-900/50 flex items-center justify-center text-diamond-600 dark:text-diamond-400">
+                                <i class="fas fa-terminal"></i>
+                            </div>
+                            <h3 class="text-xl leading-6 font-bold text-slate-900 dark:text-white" id="modal-title">
+                                디버깅 리포트
+                            </h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none transition-colors">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="mt-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <p class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed" id="modal-desc">
+                            내용이 여기에 들어갑니다.
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700 px-6 py-4 flex justify-end">
+                    <button type="button" onclick="closeModal()" class="inline-flex justify-center rounded-xl px-6 py-2.5 bg-diamond-600 text-sm font-bold text-white hover:bg-diamond-700 focus:outline-none transition-colors shadow-sm">
+                        확인 완료
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Theme Toggle Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeIconDark = document.getElementById('theme-icon-dark');
+        const themeIconLight = document.getElementById('theme-icon-light');
+        const htmlElement = document.documentElement;
+
+        // Check LocalStorage or System Preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+        } else {
+            htmlElement.classList.remove('dark');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            
+            // Save state
+            if (htmlElement.classList.contains('dark')) {
+                localStorage.theme = 'dark';
+            } else {
+                localStorage.theme = 'light';
+            }
+
+            // 업적 달성 트리거
+            triggerAchievement('vision', '시야 장악', '테마를 변경하여 시야를 확보했습니다.', 'fa-eye');
+        });
+
+        // 2. Scroll Progress Bar
+        const progressBar = document.getElementById('scroll-progress');
+        
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            progressBar.style.width = scrolled + "%";
+        });
+
+
+        // 3. Scroll Animation (Intersection Observer)
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15 // Trigger a bit later for better visual effect
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target); // Observe only once
+                }
+            });
+        }, observerOptions);
+
+        const fadeElements = document.querySelectorAll('.fade-up');
+        fadeElements.forEach(el => observer.observe(el));
+
+
+        // 4. Modal Logic (Debugging Report)
+        const modal = document.getElementById('custom-modal');
+        const modalPanel = document.getElementById('modal-panel');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+
+        function openModal(title, description) {
+            modalTitle.textContent = title;
+            modalDesc.textContent = description;
+            
+            modal.classList.remove('hidden');
+            
+            // Slight delay for transition to kick in
+            setTimeout(() => {
+                modalPanel.classList.remove('scale-95', 'opacity-0');
+                modalPanel.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            // 업적 달성 트리거
+            triggerAchievement('analysis', '분석가', '디버깅 리포트를 열람했습니다.', 'fa-search');
+        }
+
+        function closeModal() {
+            modalPanel.classList.remove('scale-100', 'opacity-100');
+            modalPanel.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // 5. Typing Effect Logic
+        const line1Text = "제로에서 다이아까지,";
+        const line2Text = "극한의 한계 돌파";
+        const typeSpeed = 80; // 타이핑 속도 (ms)
+
+        const elemLine1 = document.getElementById('typing-line1');
+        const elemLine2 = document.getElementById('typing-line2');
+        const cursor1 = document.getElementById('cursor1');
+        const cursor2 = document.getElementById('cursor2');
+
+        function typeWriter(text, element, callback) {
+            let i = 0;
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, typeSpeed);
+                } else {
+                    if (callback) callback();
+                }
+            }
+            type();
+        }
+
+        // 페이지 로드 시 타이핑 시작
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                typeWriter(line1Text, elemLine1, () => {
+                    // 첫 번째 줄 완료 후 커서 숨기고 두 번째 줄 커서 표시
+                    cursor1.classList.add('hidden');
+                    cursor2.classList.remove('hidden');
+                    
+                    // 두 번째 줄 타이핑 (잠시 쉬었다가 시작)
+                    setTimeout(() => {
+                        typeWriter(line2Text, elemLine2);
+                    }, 300);
+                });
+            }, 500); // 로딩 후 0.5초 대기
+        });
+
+        // 6. Parallax Background Logic
+        const parallaxBg = document.getElementById('parallax-bg');
+        window.addEventListener('scroll', () => {
+            window.requestAnimationFrame(() => {
+                const scrolled = window.scrollY;
+                // 스크롤 값에 따라 배경 요소를 Y축으로 이동 (0.4 배속으로 천천히 이동)
+                if (parallaxBg) {
+                    parallaxBg.style.transform = `translateY(${scrolled * 0.4}px)`;
+                }
+            });
+        });
+
+        //        // 7. Gamification: 업적(Achievement) 시스템 & 상호작용
+        const unlockedAchievements = new Set();
+        const achievementContainer = document.getElementById('achievement-container');
+
+        function triggerAchievement(id, title, desc, icon) {
+            // 이미 달성한 업적이면 패스
+            if (unlockedAchievements.has(id)) return;
+            unlockedAchievements.add(id);
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-enter bg-white dark:bg-slate-800 border-l-4 border-diamond-500 rounded-r-xl shadow-xl p-4 flex items-center gap-4 w-80 pointer-events-auto border border-y-slate-200 border-r-slate-200 dark:border-y-slate-700 dark:border-r-slate-700';
+            toast.innerHTML = `
+                <div class="w-12 h-12 shrink-0 rounded-full bg-diamond-100 dark:bg-diamond-900/50 flex items-center justify-center text-diamond-600 dark:text-diamond-400">
+                    <i class="fas ${icon} text-xl"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-diamond-500 uppercase tracking-wider mb-0.5">업적 달성!</div>
+                    <div class="text-sm font-bold text-slate-800 dark:text-white">${title}</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">${desc}</div>
+                </div>
+            `;
+            
+            achievementContainer.appendChild(toast);
+
+            // 4초 후 서서히 사라짐
+            setTimeout(() => {
+                toast.classList.replace('toast-enter', 'toast-exit');
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
+        // 스크롤 맨 아래 도달 시 업적 트리거 (Intersection Observer 활용)
+        const footerObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                triggerAchievement('victory', '승급 완료', '포트폴리오의 끝까지 도달했습니다.', 'fa-gem');
+            }
+        });
+        footerObserver.observe(document.querySelector('footer'));
+
+        // 방문자 상호작용 (명예 투표 로직)
+        const btnHonor = document.getElementById('btn-honor');
+        const honorCountDisplay = document.getElementById('honor-count');
+        
+        // 로컬 스토리지에서 투표 수 가져오기 (가상의 초기값 1240)
+        let currentHonor = parseInt(localStorage.getItem('honor_count') || '1240');
+        honorCountDisplay.textContent = currentHonor.toLocaleString();
+
+        btnHonor.addEventListener('click', () => {
+            currentHonor++;
+            localStorage.setItem('honor_count', currentHonor);
+            honorCountDisplay.textContent = currentHonor.toLocaleString();
+            
+            // 폭죽 애니메이션 (canvas-confetti)
+            confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.6 },
+                colors: ['#38bdf8', '#0ea5e9', '#0284c7', '#E4C871', '#ffffff'] // 다이아몬드 & 골드 컬러
+            });
+
+            triggerAchievement('honor', '명예로운 소환사', '동료의 프로젝트에 찬사를 보냈습니다.', 'fa-thumbs-up');
+        });
+    </script>
+</body>
+</html>
