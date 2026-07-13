@@ -179,7 +179,7 @@
                 세 개의 라인, 세 번의 증명.
             </p>
             <p class="mt-4 max-w-3xl mx-auto text-base sm:text-lg text-slate-500 dark:text-slate-400">
-                단순한 게임 플레이가 아닙니다. 탑, 정글, 미드 3개 라인의 전혀 다른 구도에서 겪은 '실패(Error)'를 분석하고 플레이를 '최적화(Optimization)'하여 목표를 달성한 데이터 기반의 문제 해결 회고록입니다.
+                단순한 게임 플레이가 아닙니다. 탑, 정글, 미드 3개 라인의 전혀 다른 생태계에서 겪은 '실패(Error)'를 분석하고 플레이를 '최적화(Optimization)'하여 목표를 달성한 데이터 기반의 문제 해결 회고록입니다.
             </p>
             <div class="mt-12 flex flex-col sm:flex-row justify-center gap-4">
                 <a href="#timeline" class="px-8 py-4 border border-transparent text-base font-bold rounded-xl shadow-md text-white bg-diamond-600 hover:bg-diamond-700 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-diamond-500/30">
@@ -443,24 +443,26 @@
             progressBar.style.width = scrolled + "%";
         });
 
+
         // 3. Scroll Animation (Intersection Observer)
         const observerOptions = {
             root: null,
             rootMargin: '0px',
-            threshold: 0.15
+            threshold: 0.15 // Trigger a bit later for better visual effect
         };
 
         const observer = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('visible');
-                    observer.unobserve(entry.target);
+                    observer.unobserve(entry.target); // Observe only once
                 }
             });
         }, observerOptions);
 
         const fadeElements = document.querySelectorAll('.fade-up');
         fadeElements.forEach(el => observer.observe(el));
+
 
         // 4. Modal Logic (Debugging Report)
         const modal = document.getElementById('custom-modal');
@@ -474,6 +476,7 @@
             
             modal.classList.remove('hidden');
             
+            // Slight delay for transition to kick in
             setTimeout(() => {
                 modalPanel.classList.remove('scale-95', 'opacity-0');
                 modalPanel.classList.add('scale-100', 'opacity-100');
@@ -495,7 +498,7 @@
         // 5. Typing Effect Logic
         const line1Text = "제로에서 다이아까지,";
         const line2Text = "극한의 한계 돌파";
-        const typeSpeed = 80;
+        const typeSpeed = 80; // 타이핑 속도 (ms)
 
         const elemLine1 = document.getElementById('typing-line1');
         const elemLine2 = document.getElementById('typing-line2');
@@ -516,17 +519,20 @@
             type();
         }
 
+        // 페이지 로드 시 타이핑 시작
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 typeWriter(line1Text, elemLine1, () => {
+                    // 첫 번째 줄 완료 후 커서 숨기고 두 번째 줄 커서 표시
                     cursor1.classList.add('hidden');
                     cursor2.classList.remove('hidden');
                     
+                    // 두 번째 줄 타이핑 (잠시 쉬었다가 시작)
                     setTimeout(() => {
                         typeWriter(line2Text, elemLine2);
                     }, 300);
                 });
-            }, 500);
+            }, 500); // 로딩 후 0.5초 대기
         });
 
         // 6. Parallax Background Logic
@@ -534,17 +540,19 @@
         window.addEventListener('scroll', () => {
             window.requestAnimationFrame(() => {
                 const scrolled = window.scrollY;
+                // 스크롤 값에 따라 배경 요소를 Y축으로 이동 (0.4 배속으로 천천히 이동)
                 if (parallaxBg) {
                     parallaxBg.style.transform = `translateY(${scrolled * 0.4}px)`;
                 }
             });
         });
 
-        // 7. Gamification: 업적(Achievement) 시스템 & 상호작용
+        //        // 7. Gamification: 업적(Achievement) 시스템 & 상호작용
         const unlockedAchievements = new Set();
         const achievementContainer = document.getElementById('achievement-container');
 
         function triggerAchievement(id, title, desc, icon) {
+            // 이미 달성한 업적이면 패스
             if (unlockedAchievements.has(id)) return;
             unlockedAchievements.add(id);
 
@@ -563,12 +571,14 @@
             
             achievementContainer.appendChild(toast);
 
+            // 4초 후 서서히 사라짐
             setTimeout(() => {
                 toast.classList.replace('toast-enter', 'toast-exit');
                 setTimeout(() => toast.remove(), 500);
             }, 4000);
         }
 
+        // 스크롤 맨 아래 도달 시 업적 트리거 (Intersection Observer 활용)
         const footerObserver = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting) {
                 triggerAchievement('victory', '승급 완료', '포트폴리오의 끝까지 도달했습니다.', 'fa-gem');
@@ -576,44 +586,28 @@
         });
         footerObserver.observe(document.querySelector('footer'));
 
-        // 방문자 상호작용 (명예 투표 로직 - 초기화 버전 + 콤보 시스템)
+        // 방문자 상호작용 (명예 투표 로직)
         const btnHonor = document.getElementById('btn-honor');
         const honorCountDisplay = document.getElementById('honor-count');
         
-        // 새로고침 할 때마다 항상 1240부터 시작하도록 고정 설정
-        let currentHonor = 1240;
+        // 로컬 스토리지에서 투표 수 가져오기 (가상의 초기값 1240)
+        let currentHonor = parseInt(localStorage.getItem('honor_count') || '1240');
         honorCountDisplay.textContent = currentHonor.toLocaleString();
 
-        let sessionVoteCount = 0; 
-
         btnHonor.addEventListener('click', () => {
-            // 버튼 누를 때 화면 상의 카운트만 증가 (새로고침 시 사라짐)
             currentHonor++;
+            localStorage.setItem('honor_count', currentHonor);
             honorCountDisplay.textContent = currentHonor.toLocaleString();
             
-            // 폭죽 애니메이션
+            // 폭죽 애니메이션 (canvas-confetti)
             confetti({
                 particleCount: 150,
                 spread: 80,
                 origin: { y: 0.6 },
-                colors: ['#38bdf8', '#0ea5e9', '#0284c7', '#E4C871', '#ffffff']
+                colors: ['#38bdf8', '#0ea5e9', '#0284c7', '#E4C871', '#ffffff'] // 다이아몬드 & 골드 컬러
             });
 
-            sessionVoteCount++; 
-            // 매 클릭마다 고유한 ID를 생성하여 중복 방지 로직 무시
-            let uniqueId = 'honor_' + Date.now(); 
-            
-            if (sessionVoteCount === 1) {
-                triggerAchievement(uniqueId, '명예로운 소환사', '동료의 프로젝트에 찬사를 보냈습니다.', 'fa-thumbs-up');
-            } else if (sessionVoteCount === 2) {
-                triggerAchievement(uniqueId, '더블 킬!', '두 번 연속 투표! 감사합니다!', 'fa-angle-double-up');
-            } else if (sessionVoteCount === 3) {
-                triggerAchievement(uniqueId, '트리플 킬!!', '칭찬이 멈추지 않습니다!', 'fa-fire text-orange-500');
-            } else if (sessionVoteCount === 4) {
-                triggerAchievement(uniqueId, '쿼드라 킬!!!', '압도적인 칭찬!', 'fa-bolt text-yellow-400');
-            } else {
-                triggerAchievement(uniqueId, '펜타 킬!!!!', '전설적인 투표자입니다!!', 'fa-crown text-yellow-500');
-            }
+            triggerAchievement('honor', '명예로운 소환사', '동료의 프로젝트에 찬사를 보냈습니다.', 'fa-thumbs-up');
         });
     </script>
 </body>
