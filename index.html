@@ -150,6 +150,16 @@
         </div>
     </div>
 
+    <!-- 중간 전환 화면 (로딩 연출) -->
+    <div id="transition-screen" class="fixed inset-0 z-[95] bg-slate-900 flex flex-col items-center justify-center opacity-0 hidden transition-opacity duration-500">
+        <i class="fas fa-circle-notch fa-spin text-5xl text-diamond-500 mb-6"></i>
+        <h2 class="text-2xl font-black text-white tracking-widest mb-2 animate-pulse">SYSTEM LOADING</h2>
+        <p class="text-slate-400 text-sm font-medium">소환사 데이터를 동기화 중입니다...</p>
+        <div class="w-64 h-1 bg-slate-800 rounded-full mt-8 overflow-hidden relative shadow-[0_0_15px_rgba(14,165,233,0.3)]">
+            <div id="loading-bar" class="absolute top-0 left-0 h-full bg-diamond-500 w-0" style="transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+        </div>
+    </div>
+
     <!-- 업적(Achievement) 토스트 알림을 띄울 컨테이너 -->
     <div id="achievement-container" class="fixed bottom-6 right-6 z-[70] flex flex-col gap-3 pointer-events-none"></div>
 
@@ -572,6 +582,8 @@
             const pwInput = document.getElementById('login-pw').value;
             const errorMsg = document.getElementById('login-error');
             const loginScreen = document.getElementById('login-screen');
+            const transitionScreen = document.getElementById('transition-screen');
+            const loadingBar = document.getElementById('loading-bar');
 
             // 지정된 ID(kjh)와 PW(5647) 검사
             if (idInput === 'kjh' && pwInput === '5647') {
@@ -584,28 +596,51 @@
                 setTimeout(() => {
                     loginScreen.classList.add('hidden');
                     
-                    // 2. 화면 스크롤 잠금 해제
-                    document.body.classList.remove('overflow-hidden');
+                    // 2. 중간 로딩 화면 페이드 인
+                    transitionScreen.classList.remove('hidden');
+                    // 브라우저 렌더링 강제 업데이트 후 투명도 조절
+                    void transitionScreen.offsetWidth; 
+                    transitionScreen.classList.remove('opacity-0');
                     
-                    // 3. 접속 성공 업적 알림
-                    triggerAchievement('login_success', '보안 해제 완료', '접속을 환영합니다, kjh 소환사님.', 'fa-unlock');
-                    
-                    // 4. 스크롤 애니메이션 초기 위치 세팅
-                    onScrollFade();
-
-                    // 5. 로그인 창이 완전히 닫힌 후 타이핑 애니메이션 시작 (극적인 연출)
+                    // 3. 로딩 바 차오르는 애니메이션 실행
                     setTimeout(() => {
-                        typeWriter(line1Text, elemLine1, () => {
-                            cursor1.classList.add('hidden');
-                            cursor2.classList.remove('hidden');
-                            
-                            setTimeout(() => {
-                                typeWriter(line2Text, elemLine2);
-                            }, 300);
-                        });
-                    }, 300);
+                        loadingBar.style.width = '100%';
+                    }, 100);
 
-                }, 500); // 0.5초 뒤 페이드아웃 종료
+                    // 4. 로딩 완료 후 본 페이지 진입 (2.5초 대기)
+                    setTimeout(() => {
+                        // 로딩 화면 페이드 아웃
+                        transitionScreen.classList.add('opacity-0');
+                        
+                        setTimeout(() => {
+                            transitionScreen.classList.add('hidden');
+                            
+                            // 5. 화면 스크롤 잠금 해제
+                            document.body.classList.remove('overflow-hidden');
+                            
+                            // 6. 접속 성공 업적 알림
+                            triggerAchievement('login_success', '보안 해제 완료', '접속을 환영합니다, kjh 소환사님.', 'fa-unlock');
+                            
+                            // 7. 스크롤 애니메이션 초기 위치 세팅
+                            onScrollFade();
+
+                            // 8. 메인 텍스트 타이핑 애니메이션 시작
+                            setTimeout(() => {
+                                typeWriter(line1Text, elemLine1, () => {
+                                    cursor1.classList.add('hidden');
+                                    cursor2.classList.remove('hidden');
+                                    
+                                    setTimeout(() => {
+                                        typeWriter(line2Text, elemLine2);
+                                    }, 300);
+                                });
+                            }, 300);
+
+                        }, 500); // 로딩 화면 사라지는 시간
+
+                    }, 2500); // 로딩 지속 시간
+
+                }, 500); // 로그인 창 사라지는 시간
             } else {
                 // 인증 실패 시 처리
                 errorMsg.classList.remove('hidden');
