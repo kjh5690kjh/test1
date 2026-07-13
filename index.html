@@ -79,13 +79,8 @@
 
         /* Animation Classes */
         .fade-up {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .fade-up.visible {
-            opacity: 1;
-            transform: translateY(0);
+            opacity: 0; /* JS가 개입하기 전 초기 상태를 투명하게 설정 */
+            will-change: opacity, transform; /* 애니메이션 성능 최적화 */
         }
 
         /* Grid Background for IT/Data feel */
@@ -126,7 +121,34 @@
         .toast-exit { animation: fadeOut 0.5s ease-out forwards; }
     </style>
 </head>
-<body class="bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors duration-300 antialiased font-sans">
+<body class="bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-200 transition-colors duration-300 antialiased font-sans overflow-hidden">
+
+    <!-- Login Screen (보안 접속 화면) -->
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center transition-opacity duration-500">
+        <div class="bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-2xl w-full max-w-sm text-center transform transition-all">
+            <div class="mb-8">
+                <div class="w-16 h-16 mx-auto bg-diamond-900/50 rounded-2xl flex items-center justify-center mb-4 border border-diamond-500/30">
+                    <i class="fas fa-lock text-3xl text-diamond-500"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white tracking-tighter">PROJECT: DIA</h2>
+                <p class="text-slate-400 mt-2 text-sm font-medium">보안 구역입니다. 자격을 증명하세요.</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <input type="text" id="login-id" placeholder="ID를 입력하세요" class="w-full bg-slate-900 text-white border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-diamond-500 focus:ring-2 focus:ring-diamond-500/50 transition-all text-sm" autocomplete="off">
+                </div>
+                <div>
+                    <input type="password" id="login-pw" placeholder="Password를 입력하세요" class="w-full bg-slate-900 text-white border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-diamond-500 focus:ring-2 focus:ring-diamond-500/50 transition-all text-sm" onkeypress="if(event.key === 'Enter') checkLogin()">
+                </div>
+                <!-- 에러 메시지 -->
+                <div id="login-error" class="text-red-400 text-xs hidden font-bold">인증 실패: ID 또는 Password가 일치하지 않습니다.</div>
+                
+                <button onclick="checkLogin()" class="w-full bg-diamond-600 hover:bg-diamond-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-diamond-500/50 mt-2 text-sm">
+                    시스템 접속
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- 업적(Achievement) 토스트 알림을 띄울 컨테이너 -->
     <div id="achievement-container" class="fixed bottom-6 right-6 z-[70] flex flex-col gap-3 pointer-events-none"></div>
@@ -443,24 +465,52 @@
             progressBar.style.width = scrolled + "%";
         });
 
-        // 3. Scroll Animation (Intersection Observer)
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.15
-        };
-
-        const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, observerOptions);
-
+        // 3. Scroll Dynamic Fade Animation (스크롤 연동 투명도 애니메이션)
         const fadeElements = document.querySelectorAll('.fade-up');
-        fadeElements.forEach(el => observer.observe(el));
+        
+        function onScrollFade() {
+            const windowHeight = window.innerHeight;
+            // 화면 아래 85% 지점에서 나타나기 시작
+            const triggerBottom = windowHeight * 0.85; 
+            // 화면 위 15% 지점에서 사라지기 시작
+            const triggerTop = windowHeight * 0.15;    
+
+            fadeElements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                const elTop = rect.top;
+                const elBottom = rect.bottom;
+                
+                let opacity = 1;
+                let translateY = 0;
+
+                // 1. 스크롤을 내려서 요소가 화면 아래에서 올라올 때 (점점 뚜렷해짐)
+                if (elTop > triggerBottom) {
+                    const distance = elTop - triggerBottom;
+                    const maxDistance = windowHeight - triggerBottom;
+                    const ratio = 1 - (distance / maxDistance);
+                    opacity = Math.max(0, ratio);
+                    translateY = 30 * (1 - opacity); // 아래에서 30px부터 제자리로
+                } 
+                // 2. 스크롤을 내려서 요소가 화면 위로 넘어갈 때 (점점 옅어짐)
+                else if (elBottom < triggerTop) {
+                    const ratio = elBottom / triggerTop;
+                    opacity = Math.max(0, Math.min(1, ratio));
+                    translateY = -30 * (1 - opacity); // 위로 30px 이동하며 사라짐
+                }
+
+                // 계산된 값 즉시 적용 (CSS transition 없이 마우스 휠에 딱 맞게 반응)
+                el.style.opacity = opacity;
+                el.style.transform = `translateY(${translateY}px)`;
+            });
+        }
+
+        // 스크롤 이벤트에 연결 (requestAnimationFrame으로 60프레임 최적화)
+        window.addEventListener('scroll', () => {
+            requestAnimationFrame(onScrollFade);
+        });
+        
+        // 페이지 로드 및 새로고침 시 초기 위치에 맞게 즉시 세팅
+        onScrollFade();
 
         // 4. Modal Logic (Debugging Report)
         const modal = document.getElementById('custom-modal');
@@ -516,18 +566,59 @@
             type();
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                typeWriter(line1Text, elemLine1, () => {
-                    cursor1.classList.add('hidden');
-                    cursor2.classList.remove('hidden');
+        // --- 수정됨: 로그인 로직 추가 및 기존 DOMContentLoaded(자동 타이핑) 삭제 ---
+        function checkLogin() {
+            const idInput = document.getElementById('login-id').value;
+            const pwInput = document.getElementById('login-pw').value;
+            const errorMsg = document.getElementById('login-error');
+            const loginScreen = document.getElementById('login-screen');
+
+            // 지정된 ID(kjh)와 PW(5647) 검사
+            if (idInput === 'kjh' && pwInput === '5647') {
+                errorMsg.classList.add('hidden'); // 에러 메시지 숨김
+                
+                // 1. 로그인 창 페이드 아웃
+                loginScreen.classList.add('opacity-0');
+                loginScreen.classList.add('pointer-events-none');
+                
+                setTimeout(() => {
+                    loginScreen.classList.add('hidden');
                     
+                    // 2. 화면 스크롤 잠금 해제
+                    document.body.classList.remove('overflow-hidden');
+                    
+                    // 3. 접속 성공 업적 알림
+                    triggerAchievement('login_success', '보안 해제 완료', '접속을 환영합니다, kjh 소환사님.', 'fa-unlock');
+                    
+                    // 4. 스크롤 애니메이션 초기 위치 세팅
+                    onScrollFade();
+
+                    // 5. 로그인 창이 완전히 닫힌 후 타이핑 애니메이션 시작 (극적인 연출)
                     setTimeout(() => {
-                        typeWriter(line2Text, elemLine2);
+                        typeWriter(line1Text, elemLine1, () => {
+                            cursor1.classList.add('hidden');
+                            cursor2.classList.remove('hidden');
+                            
+                            setTimeout(() => {
+                                typeWriter(line2Text, elemLine2);
+                            }, 300);
+                        });
                     }, 300);
-                });
-            }, 500);
-        });
+
+                }, 500); // 0.5초 뒤 페이드아웃 종료
+            } else {
+                // 인증 실패 시 처리
+                errorMsg.classList.remove('hidden');
+                
+                // 틀렸을 때 모달창이 흔들리는(Shake) 효과
+                const loginBox = loginScreen.querySelector('.bg-slate-800');
+                loginBox.style.transform = 'translateX(-10px)';
+                setTimeout(() => loginBox.style.transform = 'translateX(10px)', 50);
+                setTimeout(() => loginBox.style.transform = 'translateX(-10px)', 100);
+                setTimeout(() => loginBox.style.transform = 'translateX(10px)', 150);
+                setTimeout(() => loginBox.style.transform = 'translateX(0)', 200);
+            }
+        }
 
         // 6. Parallax Background Logic
         const parallaxBg = document.getElementById('parallax-bg');
